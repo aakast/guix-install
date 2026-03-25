@@ -10,7 +10,7 @@
 
  (channel
   (name 'parauix)
-  (url "https://github.com/aakast/parauix")
+  (url "file:///home/discritic/git/parauix")
   (branch "main"))
 
  (channel

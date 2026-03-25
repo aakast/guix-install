@@ -5,6 +5,12 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd -- "${script_dir}/.." && pwd)"
 profiles_root="${HOME}/.guix-extra-profiles"
 map_file="${root}/profiles/host-feature-map.scm"
+parauix_path="${HOME}/git/parauix"
+
+guix_args=()
+if [[ -d "${parauix_path}" ]]; then
+  guix_args+=("-L" "${parauix_path}")
+fi
 
 host="workstation"
 dry_run=0
@@ -131,7 +137,7 @@ for feature in "${features[@]}"; do
 
   mkdir -p "${profile_dir}"
   echo "Installing profile: ${feature}"
-  guix package -m "${manifest}" -p "${profile_path}"
+  guix package "${guix_args[@]}" -m "${manifest}" -p "${profile_path}"
   installed=$((installed + 1))
 done
 
