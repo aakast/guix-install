@@ -2,7 +2,6 @@
   #:use-module (gnu services)
   #:use-module (gnu services networking)
   #:use-module (gnu services ssh)
-  #:use-module (gnu packages tls)
   #:export (%common-services
             %common-packages))
 
@@ -11,5 +10,7 @@
    (service dhcpcd-service-type)
    (service openssh-service-type)))
 
+;; nss-certs is included in %base-packages by default since Guix 1.4.
+;; Add any extra system-wide packages here.
 (define %common-packages
-  (list nss-certs))
+  '())

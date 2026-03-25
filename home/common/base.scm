@@ -2,20 +2,64 @@
   #:use-module (gnu home services)
   #:use-module (guix gexp)
   #:export (home-base-env-vars
+            home-base-zsh-extra
+            home-base-bash-extra
             home-base-activation-service))
 
 (define home-base-env-vars
   '(("EDITOR" . "nvim")
+    ("VISUAL" . "nvim")
     ("PAGER" . "less")
-    ("XDG_STATE_HOME" . "$HOME/.local/state")))
+    ("GOPATH" . "$HOME/go")
+    ("CARGO_HOME" . "$HOME/.cargo")
+    ("RUSTUP_HOME" . "$HOME/.rustup")
+    ("GUIX_LOCPATH" . "$HOME/.guix-profile/lib/locale")
+    ("SSL_CERT_DIR" . "$HOME/.guix-profile/etc/ssl/certs")
+    ("SSL_CERT_FILE" . "$HOME/.guix-profile/etc/ssl/certs/ca-certificates.crt")))
+
+(define home-base-zsh-extra
+  "
+if [ -f ~/.guix-profile/etc/profile ]; then
+  source ~/.guix-profile/etc/profile
+fi
+if [ -f ~/.config/guix/current/etc/profile ]; then
+  source ~/.config/guix/current/etc/profile
+fi
+
+setopt local_options nonomatch
+for p in ~/.guix-extra-profiles/*/; do
+  profile=\"${p}$(basename $p)\"
+  if [ -f \"${profile}/etc/profile\" ]; then
+    source \"${profile}/etc/profile\"
+  fi
+done
+")
+
+(define home-base-bash-extra
+  "
+if [ -f ~/.guix-profile/etc/profile ]; then
+  source ~/.guix-profile/etc/profile
+fi
+if [ -f ~/.config/guix/current/etc/profile ]; then
+  source ~/.config/guix/current/etc/profile
+fi
+
+shopt -s nullglob
+for p in ~/.guix-extra-profiles/*/; do
+  profile=\"${p}$(basename $p)\"
+  if [ -f \"${profile}/etc/profile\" ]; then
+    source \"${profile}/etc/profile\"
+  fi
+done
+shopt -u nullglob
+")
 
 (define home-base-activation-service
   (simple-service
    'home-base-directories
    home-activation-service-type
    #~(begin
-       (use-modules (guix build utils)
-                    (ice-9 passwd))
+       (use-modules (guix build utils))
        (let* ((home (passwd:dir (getpwuid (getuid))))
               (dirs (list (string-append home "/src")
                           (string-append home "/docs")

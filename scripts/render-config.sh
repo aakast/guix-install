@@ -18,18 +18,22 @@ part() {
 P1="$(part "$DISK" 1)"
 P2="$(part "$DISK" 2)"
 P3="$(part "$DISK" 3)"
+P4="$(part "$DISK" 4)"
 
 ESP_UUID="$(blkid -s UUID -o value "$P1")"
-LUKS_SWAP_UUID="$(blkid -s UUID -o value "$P2")"
-LUKS_ROOT_UUID="$(blkid -s UUID -o value "$P3")"
+BOOT_UUID="$(blkid -s UUID -o value "$P2")"
+LUKS_SWAP_UUID="$(blkid -s UUID -o value "$P3")"
+LUKS_ROOT_UUID="$(blkid -s UUID -o value "$P4")"
 
 sed \
   -e "s/{{ESP_UUID}}/${ESP_UUID}/g" \
+  -e "s/{{BOOT_UUID}}/${BOOT_UUID}/g" \
   -e "s/{{LUKS_SWAP_UUID}}/${LUKS_SWAP_UUID}/g" \
   -e "s/{{LUKS_ROOT_UUID}}/${LUKS_ROOT_UUID}/g" \
   "$TEMPLATE" > "$OUT"
 
 printf 'Rendered %s from %s\n' "$OUT" "$TEMPLATE"
 printf '  ESP_UUID=%s\n' "$ESP_UUID"
+printf '  BOOT_UUID=%s\n' "$BOOT_UUID"
 printf '  LUKS_SWAP_UUID=%s\n' "$LUKS_SWAP_UUID"
 printf '  LUKS_ROOT_UUID=%s\n' "$LUKS_ROOT_UUID"

@@ -6,6 +6,33 @@ if [[ -z "${BASH_VERSION:-}" ]]; then
   exit 1
 fi
 
+if [[ -t 1 ]]; then
+  C_RESET='\033[0m'
+  C_CYAN='\033[36m'
+  C_GREEN='\033[32m'
+  C_YELLOW='\033[33m'
+else
+  C_RESET=''
+  C_CYAN=''
+  C_GREEN=''
+  C_YELLOW=''
+fi
+
+step() {
+  local idx="$1"
+  local total="$2"
+  local msg="$3"
+  printf '\n%s[%s/%s]%s %s\n' "$C_CYAN" "$idx" "$total" "$C_RESET" "$msg"
+}
+
+done_step() {
+  printf '%s[ok]%s %s\n' "$C_GREEN" "$C_RESET" "$1"
+}
+
+warn() {
+  printf '%s[warn]%s %s\n' "$C_YELLOW" "$C_RESET" "$1"
+}
+
 # Usage:
 #   sudo ./deploy/provision.sh /dev/nvme0n1
 #   sudo ./deploy/provision.sh /dev/sda
@@ -16,6 +43,7 @@ fi
 DISK="${1:?Usage: $0 /dev/<disk>}"
 
 ESP_SIZE_MIB=1024
+BOOT_SIZE_MIB=1024
 SWAP_SIZE_GIB=40
 LUKS_CIPHER="aes-xts-plain64"
 LUKS_KEY_SIZE=512
@@ -29,7 +57,7 @@ require_cmd() {
   }
 }
 
-for cmd in lsblk wipefs sgdisk parted cryptsetup mkfs.fat mkfs.btrfs mkswap blkid mount umount partprobe; do
+for cmd in lsblk wipefs sgdisk parted cryptsetup mkfs.fat mkfs.ext4 mkfs.btrfs mkswap blkid mount umount partprobe; do
   require_cmd "$cmd"
 done
 
@@ -39,11 +67,11 @@ if [[ ! -b "$DISK" ]]; then
 fi
 
 printf '\nTarget disk: %s\n' "$DISK"
-printf 'About to DESTROY all data on %s\n\n' "$DISK"
+printf '%s[warn]%s About to DESTROY all data on %s\n\n' "$C_YELLOW" "$C_RESET" "$DISK"
 
 read -r -p "Type YES to continue: " CONFIRM < /dev/tty
 [[ "$CONFIRM" == "YES" ]] || {
-  printf 'Aborted.\n'
+  warn 'Aborted.'
   exit 1
 }
 
@@ -57,32 +85,37 @@ part() {
   fi
 }
 
-P1="$(part "$DISK" 1)"
-P2="$(part "$DISK" 2)"
-P3="$(part "$DISK" 3)"
+P1="$(part "$DISK" 1)"   # ESP
+P2="$(part "$DISK" 2)"   # /boot (unencrypted)
+P3="$(part "$DISK" 3)"   # cryptswap
+P4="$(part "$DISK" 4)"   # cryptroot
 
-printf '\n[1/9] Unmounting anything mounted from %s\n' "$DISK"
+step "1" "10" "Unmounting anything mounted from $DISK"
 umount -R /mnt 2>/dev/null || true
-swapoff "$P2" 2>/dev/null || true
+swapoff "$P3" 2>/dev/null || true
 cryptsetup close cryptroot 2>/dev/null || true
 cryptsetup close cryptswap 2>/dev/null || true
 
-printf '\n[2/9] Wiping old signatures and partition table\n'
+step "2" "10" "Wiping old signatures and partition table"
 wipefs -a "$DISK" || true
 sgdisk --zap-all "$DISK"
 dd if=/dev/zero of="$DISK" bs=1M count=100 status=progress conv=fsync
 
-printf '\n[3/9] Creating GPT partition table\n'
+step "3" "10" "Creating GPT partition table"
 parted -s "$DISK" mklabel gpt
 
-SWAP_END_MIB=$((ESP_SIZE_MIB + 1 + SWAP_SIZE_GIB * 1024))
+BOOT_END_MIB=$((ESP_SIZE_MIB + 1 + BOOT_SIZE_MIB))
+SWAP_END_MIB=$((BOOT_END_MIB + SWAP_SIZE_GIB * 1024))
 
 parted -s "$DISK" \
   mkpart ESP fat32 1MiB "${ESP_SIZE_MIB}MiB" \
   set 1 esp on
 
 parted -s "$DISK" \
-  mkpart cryptswap linux-swap "${ESP_SIZE_MIB}MiB" "${SWAP_END_MIB}MiB"
+  mkpart boot ext4 "${ESP_SIZE_MIB}MiB" "${BOOT_END_MIB}MiB"
+
+parted -s "$DISK" \
+  mkpart cryptswap linux-swap "${BOOT_END_MIB}MiB" "${SWAP_END_MIB}MiB"
 
 parted -s "$DISK" \
   mkpart cryptroot "${SWAP_END_MIB}MiB" 100%
@@ -90,14 +123,30 @@ parted -s "$DISK" \
 partprobe "$DISK"
 sleep 2
 
-printf '\n[4/9] Formatting EFI partition\n'
+step "4" "10" "Formatting EFI partition"
 mkfs.fat -F 32 -n EFI "$P1"
 
-printf '\n[5/9] Creating LUKS2 containers\n'
+step "5" "10" "Formatting /boot partition"
+mkfs.ext4 -L boot "$P2"
+
+step "6" "10" "Creating LUKS2 containers"
 printf 'Set passphrase for ROOT container:\n'
 printf '  (input is hidden; type passphrase and press Enter)\n'
 cryptsetup luksFormat \
   --type luks2 \
+  --pbkdf pbkdf2 \
+  --batch-mode \
+  --verify-passphrase \
+  --cipher "$LUKS_CIPHER" \
+  --key-size "$LUKS_KEY_SIZE" \
+  --hash "$LUKS_HASH" \
+  "$P4" < /dev/tty
+
+printf 'Set passphrase for SWAP container:\n'
+printf '  (input is hidden; type passphrase and press Enter)\n'
+cryptsetup luksFormat \
+  --type luks2 \
+  --pbkdf pbkdf2 \
   --batch-mode \
   --verify-passphrase \
   --cipher "$LUKS_CIPHER" \
@@ -105,26 +154,15 @@ cryptsetup luksFormat \
   --hash "$LUKS_HASH" \
   "$P3" < /dev/tty
 
-printf 'Set passphrase for SWAP container:\n'
-printf '  (input is hidden; type passphrase and press Enter)\n'
-cryptsetup luksFormat \
-  --type luks2 \
-  --batch-mode \
-  --verify-passphrase \
-  --cipher "$LUKS_CIPHER" \
-  --key-size "$LUKS_KEY_SIZE" \
-  --hash "$LUKS_HASH" \
-  "$P2" < /dev/tty
+step "7" "10" "Opening LUKS containers"
+cryptsetup open "$P4" cryptroot
+cryptsetup open "$P3" cryptswap
 
-printf '\n[6/9] Opening LUKS containers\n'
-cryptsetup open "$P3" cryptroot
-cryptsetup open "$P2" cryptswap
-
-printf '\n[7/9] Creating filesystems\n'
+step "8" "10" "Creating filesystems"
 mkfs.btrfs -f -L guixroot /dev/mapper/cryptroot
 mkswap -L swap /dev/mapper/cryptswap
 
-printf '\n[8/9] Creating Btrfs subvolumes\n'
+step "9" "10" "Creating Btrfs subvolumes"
 mount /dev/mapper/cryptroot /mnt
 
 btrfs subvolume create /mnt/@
@@ -137,7 +175,7 @@ btrfs subvolume create /mnt/@data
 
 umount /mnt
 
-printf '\n[9/9] Mounting final layout under /mnt\n'
+step "10" "10" "Mounting final layout under /mnt"
 mount -o "$BTRFS_MOUNT_OPTS" /dev/mapper/cryptroot /mnt
 
 mkdir -p /mnt/home
@@ -146,10 +184,15 @@ mkdir -p /mnt/.snapshots
 mkdir -p /mnt/gnu
 mkdir -p /mnt/git
 mkdir -p /mnt/data
+mkdir -p /mnt/boot
+
+mount "$P2" /mnt/boot
+
 mkdir -p /mnt/boot/efi
 
 mount -o subvol=@home,compress=zstd:3,noatime,ssd,space_cache=v2 /dev/mapper/cryptroot /mnt/home
 mount -o subvol=@var,compress=zstd:3,noatime,ssd,space_cache=v2 /dev/mapper/cryptroot /mnt/var
+ln -sfn /run /mnt/var/run
 mount -o subvol=@snapshots,compress=zstd:3,noatime,ssd,space_cache=v2 /dev/mapper/cryptroot /mnt/.snapshots
 mount -o subvol=@gnu,compress=zstd:3,noatime,ssd,space_cache=v2 /dev/mapper/cryptroot /mnt/gnu
 mount -o subvol=@git,compress=zstd:3,noatime,ssd,space_cache=v2 /dev/mapper/cryptroot /mnt/git
@@ -158,17 +201,21 @@ mount -o subvol=@data,compress=zstd:3,noatime,ssd,space_cache=v2 /dev/mapper/cry
 mount "$P1" /mnt/boot/efi
 swapon /dev/mapper/cryptswap
 
-ROOT_UUID="$(blkid -s UUID -o value "$P3")"
-SWAP_UUID="$(blkid -s UUID -o value "$P2")"
+ROOT_UUID="$(blkid -s UUID -o value "$P4")"
+SWAP_UUID="$(blkid -s UUID -o value "$P3")"
+BOOT_UUID="$(blkid -s UUID -o value "$P2")"
 ESP_UUID="$(blkid -s UUID -o value "$P1")"
 BTRFS_UUID="$(blkid -s UUID -o value /dev/mapper/cryptroot)"
 
-printf '\nProvisioning complete.\n\n'
+printf '\n'
+done_step "Provisioning complete"
+printf '\n'
 printf 'Mounted layout:\n'
 findmnt -R /mnt
 
 printf '\nUUIDs for rendered host config:\n'
 printf '  ESP partition UUID:        %s\n' "$ESP_UUID"
+printf '  Boot partition UUID:       %s\n' "$BOOT_UUID"
 printf '  LUKS root partition UUID:  %s\n' "$ROOT_UUID"
 printf '  LUKS swap partition UUID:  %s\n' "$SWAP_UUID"
 printf '  Btrfs filesystem UUID:     %s\n\n' "$BTRFS_UUID"

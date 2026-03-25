@@ -1,6 +1,7 @@
 (use-modules
  (gnu)
  (gnu system nss)
+ (gnu system locale)
  (gnu system file-systems)
  (gnu system mapped-devices)
  (gnu services)
@@ -9,7 +10,7 @@
  (system roles desktop))
 
 (define keyboard-layout
-  (keyboard-layout "dk"))
+  (keyboard-layout "us"))
 
 (define %mapped-devices
   (list
@@ -28,44 +29,56 @@
     (mount-point "/")
     (device "/dev/mapper/cryptroot")
     (type "btrfs")
-    (options "subvol=@,compress=zstd:3,noatime,ssd,space_cache=v2")
+    (flags '(no-atime))
+    (options "subvol=@,compress=zstd:3,ssd,space_cache=v2")
     (dependencies %mapped-devices))
    (file-system
     (mount-point "/home")
     (device "/dev/mapper/cryptroot")
     (type "btrfs")
-    (options "subvol=@home,compress=zstd:3,noatime,ssd,space_cache=v2")
+    (flags '(no-atime))
+    (options "subvol=@home,compress=zstd:3,ssd,space_cache=v2")
     (dependencies %mapped-devices))
    (file-system
     (mount-point "/var")
     (device "/dev/mapper/cryptroot")
     (type "btrfs")
-    (options "subvol=@var,compress=zstd:3,noatime,ssd,space_cache=v2")
+    (needed-for-boot? #t)
+    (flags '(no-atime))
+    (options "subvol=@var,compress=zstd:3,ssd,space_cache=v2")
     (dependencies %mapped-devices))
    (file-system
     (mount-point "/.snapshots")
     (device "/dev/mapper/cryptroot")
     (type "btrfs")
-    (options "subvol=@snapshots,compress=zstd:3,noatime,ssd,space_cache=v2")
+    (flags '(no-atime))
+    (options "subvol=@snapshots,compress=zstd:3,ssd,space_cache=v2")
     (dependencies %mapped-devices))
    (file-system
     (mount-point "/gnu")
     (device "/dev/mapper/cryptroot")
     (type "btrfs")
-    (options "subvol=@gnu,compress=zstd:3,noatime,ssd,space_cache=v2")
+    (flags '(no-atime))
+    (options "subvol=@gnu,compress=zstd:3,ssd,space_cache=v2")
     (dependencies %mapped-devices))
    (file-system
     (mount-point "/git")
     (device "/dev/mapper/cryptroot")
     (type "btrfs")
-    (options "subvol=@git,compress=zstd:3,noatime,ssd,space_cache=v2")
+    (flags '(no-atime))
+    (options "subvol=@git,compress=zstd:3,ssd,space_cache=v2")
     (dependencies %mapped-devices))
    (file-system
     (mount-point "/data")
     (device "/dev/mapper/cryptroot")
     (type "btrfs")
-    (options "subvol=@data,compress=zstd:3,noatime,ssd,space_cache=v2")
+    (flags '(no-atime))
+    (options "subvol=@data,compress=zstd:3,ssd,space_cache=v2")
     (dependencies %mapped-devices))
+   (file-system
+    (mount-point "/boot")
+    (device (uuid "{{BOOT_UUID}}" 'ext4))
+    (type "ext4"))
    (file-system
     (mount-point "/boot/efi")
     (device (uuid "{{ESP_UUID}}" 'fat32))
@@ -76,8 +89,7 @@
    'create-workstation-directories
    activation-service-type
    #~(begin
-       (use-modules (guix build utils)
-                    (ice-9 passwd))
+       (use-modules (guix build utils))
        (let* ((pw (getpwnam "philip"))
               (uid (passwd:uid pw))
               (gid (passwd:gid pw))
@@ -92,7 +104,15 @@
   (host-name "workstation")
   (timezone "Europe/Copenhagen")
   (locale "en_DK.utf8")
+  (locale-definitions
+   (cons (locale-definition
+          (name "en_DK.utf8")
+          (source "en_DK"))
+         %default-locale-definitions))
   (keyboard-layout keyboard-layout)
+
+  (kernel-arguments
+   (append (list "fbcon=rotate:1") %default-kernel-arguments))
 
   (bootloader
    (bootloader-configuration
