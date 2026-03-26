@@ -5,11 +5,9 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd -- "${script_dir}/.." && pwd)"
 profiles_root="${HOME}/.guix-extra-profiles"
 map_file="${root}/profiles/host-feature-map.scm"
-guix_bin="${HOME}/.config/guix/current/bin/guix"
+channels_file="${root}/channels.scm"
 
-if [[ ! -x "${guix_bin}" ]]; then
-  guix_bin="$(command -v guix)"
-fi
+guix_bin="$(command -v guix)"
 
 host="workstation"
 dry_run=0
@@ -63,17 +61,8 @@ if [[ ! -f "${map_file}" ]]; then
   exit 1
 fi
 
-describe_output="$(${guix_bin} describe 2>/dev/null || true)"
-if [[ "${describe_output}" != *$'\n  parauix '* && "${describe_output}" != "  parauix "* ]]; then
-  cat >&2 <<EOF
-Error: channel 'parauix' is not active in the current Guix profile.
-
-Run:
-  guix pull -C ${root}/channels.scm
-
-Then start a new shell (or source ~/.config/guix/current/etc/profile),
-and run this command again.
-EOF
+if [[ ! -f "${channels_file}" ]]; then
+  echo "Error: channels.scm not found at ${channels_file}" >&2
   exit 1
 fi
 
@@ -150,7 +139,8 @@ for feature in "${features[@]}"; do
 
   mkdir -p "${profile_dir}"
   echo "Installing profile: ${feature}"
-  "${guix_bin}" package -m "${manifest}" -p "${profile_path}"
+  "${guix_bin}" time-machine -C "${channels_file}" -- \
+    package -m "${manifest}" -p "${profile_path}"
   installed=$((installed + 1))
 done
 
