@@ -119,14 +119,16 @@ run_guix_package_with_retry() {
   local profile_path="$2"
   local attempt=1
   local status=0
+  local delay=0
 
   while (( attempt <= max_retries )); do
     if "${guix_bin}" time-machine -C "${channels_file}" -- \
       package -m "${manifest}" -p "${profile_path}"; then
       return 0
+    else
+      status=$?
     fi
 
-    status=$?
     if (( attempt == max_retries )); then
       echo "Error: guix command failed after ${attempt} attempts." >&2
       return "${status}"

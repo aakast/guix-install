@@ -1,14 +1,18 @@
-(use-modules (guix profiles))
+(use-modules (guix profiles)
+             (packages cli-tools))
 
-(specifications->manifest
- '(
-   "atuin"
-   "battop"
-   "duf"
-   "glow"
-   "lazygit"
-   "manga-tui"
-   "mods"
-   "opencode"
-   "sops"
-   ))
+(concatenate-manifests
+ (list
+  (specifications->manifest
+   '(
+     "atuin"
+     "battop"
+     "duf"
+     "glow"
+     "lazygit"
+     "manga-tui"
+     "mods"
+     "sops"
+     ))
+  (packages->manifest
+   (list opencode))))
