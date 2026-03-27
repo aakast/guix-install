@@ -12,6 +12,8 @@ guix_bin="$(command -v guix)"
 host="workstation"
 dry_run=0
 strict=0
+max_retries="${GUIX_RETRY_MAX:-4}"
+retry_base_delay="${GUIX_RETRY_BASE_DELAY:-4}"
 
 usage() {
   cat <<EOF
@@ -22,6 +24,10 @@ Options:
   --dry-run  Print planned installs without running guix package
   --strict   Fail when a mapped manifest is missing
   -h, --help Show this help text
+
+Environment:
+  GUIX_RETRY_MAX         Number of retry attempts for transient failures (default: 4)
+  GUIX_RETRY_BASE_DELAY  Base retry delay in seconds (default: 4)
 
 Examples:
   ./install-host-profiles.sh
@@ -108,6 +114,34 @@ echo
 installed=0
 skipped=0
 
+run_guix_package_with_retry() {
+  local manifest="$1"
+  local profile_path="$2"
+  local attempt=1
+  local status=0
+
+  while (( attempt <= max_retries )); do
+    if "${guix_bin}" time-machine -C "${channels_file}" -- \
+      package -m "${manifest}" -p "${profile_path}"; then
+      return 0
+    fi
+
+    status=$?
+    if (( attempt == max_retries )); then
+      echo "Error: guix command failed after ${attempt} attempts." >&2
+      return "${status}"
+    fi
+
+    delay=$((retry_base_delay * attempt))
+    echo "Warning: guix command failed (attempt ${attempt}/${max_retries}, exit ${status})." >&2
+    echo "Retrying in ${delay}s..." >&2
+    sleep "${delay}"
+    attempt=$((attempt + 1))
+  done
+
+  return "${status}"
+}
+
 for feature in "${features[@]}"; do
   if [[ "${feature}" == host-* ]]; then
     hostname="${feature#host-}"
@@ -139,8 +173,7 @@ for feature in "${features[@]}"; do
 
   mkdir -p "${profile_dir}"
   echo "Installing profile: ${feature}"
-  "${guix_bin}" time-machine -C "${channels_file}" -- \
-    package -m "${manifest}" -p "${profile_path}"
+  run_guix_package_with_retry "${manifest}" "${profile_path}"
   installed=$((installed + 1))
 done
 

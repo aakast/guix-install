@@ -1,15 +1,19 @@
 # guix-install-kit
 
-Reusable Guix System install kit for a desktop workstation.  The repository is
-structured like `~/.config/guix`: composable `system/` and `home/` modules,
-host entry points, deployment scripts, and host runbooks.
+Reusable Guix System install kit for a desktop workstation.
 
-The default workflow is:
+This repo is the source of truth on the workstation at `/git/guix`.
+Do not assume `~/.config/guix` defaults; all operational commands use explicit
+paths under `/git/guix`.
+
+The end-to-end workflow is:
 
 1. bootstrap live installer environment
-2. install system (pull latest Guix, provision, backup metadata, render UUIDs, `guix system init`)
-3. set passwords on first boot
+2. install system (pull channels, provision disk, backup metadata, render UUIDs, `guix system init`)
+3. set initial passwords on first boot
 4. apply Guix Home
+5. install host feature profiles
+6. log in on `tty1` and auto-start River
 
 ## Layout
 
@@ -72,12 +76,15 @@ First boot:
 
 ```bash
 sudo ./scripts/post-install.sh philip
-guix home reconfigure --load-path=. home.scm
+just home
+just profiles
 ```
 
 `post-install.sh` intentionally handles only non-declarative operations (interactive
 password setup and guidance for optional LUKS recovery-key hardening).  User home
 state is declared in `home/` and applied via Guix Home.
+
+After `just home`, shell login on `tty1` auto-starts River.
 
 ## `just` commands
 
@@ -97,13 +104,29 @@ just reinstall /dev/nvme0n1
 # Full install pipeline (recommended)
 just install /dev/nvme0n1 /mnt/external/workstation-backup
 
-# First boot and home
+# First boot and user environment
 just post-install
 just home
 just home-build
+just profiles
+just profiles-dry-run
 
 # Optional hardening and snapshots
 just harden /dev/nvme0n1
 just snapshot
 just snapshot-prune 14
 ```
+
+## Path conventions
+
+- This repository is expected at `/git/guix` on the workstation.
+- `just pull` uses `/git/guix/channels.scm`.
+- `just home` and `just home-build` use `--load-path=/git/guix` and `/git/guix/home.scm`.
+- Extra profiles are installed through `/git/guix/profiles/install-host-profiles.sh`.
+
+## Dotfiles + theming
+
+- Guix Home imports files from `/git/dotfiles` via `local-file` in `home/hosts/workstation.scm`.
+- Pywal dynamic files are rendered at runtime from `.tmpl` files by
+  `/git/dotfiles/scripts/apply_pywal_theme.sh`.
+- Guix Home manages static configs; pywal output stays in `~/.cache/wal/`.
