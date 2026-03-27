@@ -114,20 +114,79 @@ echo
 installed=0
 skipped=0
 
+print_compressed_log_excerpt() {
+  local log_path="$1"
+  local lines="${2:-120}"
+
+  if [[ ! -e "${log_path}" ]]; then
+    echo "Warning: log path does not exist: ${log_path}" >&2
+    return 1
+  fi
+
+  case "${log_path}" in
+    *.bz2)
+      bzcat "${log_path}" | tail -n "${lines}"
+      ;;
+    *.gz)
+      zcat "${log_path}" | tail -n "${lines}"
+      ;;
+    *.xz)
+      xzcat "${log_path}" | tail -n "${lines}"
+      ;;
+    *)
+      tail -n "${lines}" "${log_path}"
+      ;;
+  esac
+}
+
+print_last_failure_log_excerpt() {
+  local build_output="$1"
+  local drv
+  local log_path
+
+  drv="$(grep -Eo '/gnu/store/[^ ]+\.drv' "${build_output}" | tail -n 1 || true)"
+  if [[ -z "${drv}" ]]; then
+    drv="$("${guix_bin}" gc --list-failures | tail -n 1 || true)"
+  fi
+
+  if [[ -z "${drv}" ]]; then
+    echo "Warning: could not determine failed derivation path." >&2
+    return 1
+  fi
+
+  log_path="$("${guix_bin}" build --log-file "${drv}" 2>/dev/null || true)"
+  if [[ -z "${log_path}" ]]; then
+    echo "Warning: could not resolve build log for ${drv}." >&2
+    return 1
+  fi
+
+  echo "Build log: ${log_path}" >&2
+  echo "----- log excerpt (last 120 lines) -----" >&2
+  print_compressed_log_excerpt "${log_path}" 120 || true
+  echo "----- end excerpt -----" >&2
+}
+
 run_guix_package_with_retry() {
   local manifest="$1"
   local profile_path="$2"
   local attempt=1
   local status=0
   local delay=0
+  local build_output
+
+  build_output="$(mktemp)"
+  trap 'rm -f "${build_output}"' RETURN
 
   while (( attempt <= max_retries )); do
     if "${guix_bin}" time-machine -C "${channels_file}" -- \
-      package -m "${manifest}" -p "${profile_path}"; then
+      package -m "${manifest}" -p "${profile_path}" \
+      2>&1 | tee "${build_output}"; then
       return 0
     else
       status=$?
     fi
+
+    print_last_failure_log_excerpt "${build_output}" || true
 
     if (( attempt == max_retries )); then
       echo "Error: guix command failed after ${attempt} attempts." >&2
