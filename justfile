@@ -9,7 +9,7 @@ bootstrap:
 
 # Pull Guix with pinned channels for this repo.
 pull:
-  guix pull -C /git/guix/channels.scm
+  guix pull -C "{{justfile_directory()}}/channels.scm"
 
 # Destructive disk provisioning (partition, LUKS, btrfs, mounts).
 provision disk:
@@ -36,20 +36,20 @@ install disk outdir:
   sudo ./scripts/full-install.sh {{disk}} {{outdir}}
 
 # Build Guix Home configuration.
-home-build config="/git/guix/home.scm":
-  guix home build --load-path=/git/guix {{config}}
+home-build config="{{justfile_directory()}}/home.scm":
+  guix home build --load-path="{{justfile_directory()}}" "{{config}}"
 
 # Apply Guix Home configuration.
-home config="/git/guix/home.scm":
-  guix home reconfigure --load-path=/git/guix {{config}}
+home config="{{justfile_directory()}}/home.scm":
+  guix home reconfigure --load-path="{{justfile_directory()}}" "{{config}}"
 
 # Install extra package profiles for workstation host.
 profiles host="workstation":
-  /git/guix/profiles/install-host-profiles.sh {{host}}
+  "{{justfile_directory()}}/profiles/install-host-profiles.sh" "{{host}}"
 
 # Preview extra package profile installs for workstation host.
 profiles-dry-run host="workstation":
-  /git/guix/profiles/install-host-profiles.sh --dry-run {{host}}
+  "{{justfile_directory()}}/profiles/install-host-profiles.sh" --dry-run "{{host}}"
 
 # First-boot password setup (interactive).
 post-install user="philip":
