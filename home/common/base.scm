@@ -13,14 +13,14 @@
     ("GOPATH" . "$HOME/go")
     ("CARGO_HOME" . "$HOME/.cargo")
     ("RUSTUP_HOME" . "$HOME/.rustup")
-    ("GUIX_LOCPATH" . "$HOME/.guix-profile/lib/locale")
-    ("SSL_CERT_DIR" . "$HOME/.guix-profile/etc/ssl/certs")
-    ("SSL_CERT_FILE" . "$HOME/.guix-profile/etc/ssl/certs/ca-certificates.crt")))
+    ("GUIX_LOCPATH" . "$HOME/.guix-home/profile/lib/locale")
+    ("SSL_CERT_DIR" . "$HOME/.guix-home/profile/etc/ssl/certs")
+    ("SSL_CERT_FILE" . "$HOME/.guix-home/profile/etc/ssl/certs/ca-certificates.crt")))
 
 (define home-base-zsh-extra
   "
-if [ -f ~/.guix-profile/etc/profile ]; then
-  source ~/.guix-profile/etc/profile
+if [ -f ~/.guix-home/profile/etc/profile ]; then
+  source ~/.guix-home/profile/etc/profile
 fi
 if [ -f ~/.config/guix/current/etc/profile ]; then
   source ~/.config/guix/current/etc/profile
@@ -37,8 +37,8 @@ done
 
 (define home-base-bash-extra
   "
-if [ -f ~/.guix-profile/etc/profile ]; then
-  source ~/.guix-profile/etc/profile
+if [ -f ~/.guix-home/profile/etc/profile ]; then
+  source ~/.guix-home/profile/etc/profile
 fi
 if [ -f ~/.config/guix/current/etc/profile ]; then
   source ~/.config/guix/current/etc/profile
