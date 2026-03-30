@@ -7,7 +7,7 @@
  (gnu services)
  (guix gexp)
  (system common base)
- (system roles desktop))
+ {{SERVICE_SET_MODULES}})
 
 (define keyboard-layout
   (keyboard-layout "us"))
@@ -86,33 +86,34 @@
 
 (define %directory-bootstrap-service
   (simple-service
-   'create-workstation-directories
+   {{DIRECTORY_BOOTSTRAP_SERVICE_NAME}}
    activation-service-type
    #~(begin
        (use-modules (guix build utils))
-       (let* ((pw (getpwnam "philip"))
+       (let* ((pw (getpwnam {{PRIMARY_USER_NAME}}))
               (uid (passwd:uid pw))
               (gid (passwd:gid pw))
-              (dirs '("/git"
-                      "/data")))
+              (dirs {{MANAGED_DIRECTORIES}}))
          (for-each mkdir-p dirs)
          (for-each (lambda (dir)
                      (chown dir uid gid))
                    dirs)))))
 
 (operating-system
-  (host-name "workstation")
-  (timezone "Europe/Copenhagen")
-  (locale "en_DK.utf8")
+  (host-name {{HOST_NAME}})
+  (timezone {{TIMEZONE}})
+  (locale {{LOCALE}})
   (locale-definitions
    (cons (locale-definition
-          (name "en_DK.utf8")
-          (source "en_DK"))
+          (name {{LOCALE}})
+          (source {{LOCALE_SOURCE}}))
          %default-locale-definitions))
   (keyboard-layout keyboard-layout)
 
   (kernel-arguments
-   (append (list "fbcon=rotate:1") %default-kernel-arguments))
+   (append {{HOST_KERNEL_ARGUMENTS}}
+           {{SERVICE_SET_KERNEL_ARGUMENTS_EXPR}}
+           %default-kernel-arguments))
 
   (bootloader
    (bootloader-configuration
@@ -133,19 +134,21 @@
   (users
    (cons
     (user-account
-     (name "philip")
-     (comment "Philip")
-     (group "users")
-     (home-directory "/home/philip")
-     (supplementary-groups '("wheel" "netdev" "audio" "video" "input")))
+     (name {{PRIMARY_USER_NAME}})
+     (comment {{PRIMARY_USER_COMMENT}})
+     (group {{PRIMARY_USER_GROUP}})
+     (home-directory {{PRIMARY_USER_HOME}})
+     (supplementary-groups {{PRIMARY_USER_SUPPLEMENTARY_GROUPS}}))
     %base-user-accounts))
 
-  (packages (append %common-packages %base-packages))
+  (packages (append %common-packages
+                    {{SERVICE_SET_PACKAGES_EXPR}}
+                    %base-packages))
 
   (services
    (append
     %common-services
-    %desktop-services
+    {{SERVICE_SET_SERVICES_EXPR}}
     (list %directory-bootstrap-service)
     %base-services))
 

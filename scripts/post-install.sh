@@ -57,9 +57,9 @@ fi
 printf '\n'
 done_step "Post-install complete"
 printf 'Next, apply Guix Home (as %s, not root):\n' "$USER_NAME"
-printf '  guix home reconfigure --load-path=/git/guix /git/guix/home.scm\n\n'
+printf '  just -f /git/guix/justfile home                 # defaults to hostname -s\n\n'
 printf 'To reconfigure the system later:\n'
-printf '  sudo guix system reconfigure --load-path=/git/guix /git/guix/system/hosts/workstation.scm\n\n'
+printf '  just -f /git/guix/justfile reconfigure          # defaults to hostname -s\n\n'
 printf 'Optional hardening:\n'
 printf '  cryptsetup luksAddKey /dev/<disk-partition-for-cryptroot>\n'
 printf '  /git/guix/deploy/backup-storage-metadata.sh /dev/<disk> /path/to/off-machine-backup\n'

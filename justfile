@@ -22,9 +22,10 @@ backup disk outdir:
   sudo ./deploy/backup-storage-metadata.sh {{disk}} {{outdir}}
 
 # Render install config with live UUIDs.
-render disk host=current_host template=("system/hosts/" + host + ".template.scm") out=("system/hosts/" + host + ".scm"):
+render disk host=current_host template=("system/hosts/" + host + ".template.scm") out=("system/hosts/" + host + ".scm") host_definition=("system/host-definitions/" + host + ".scm"):
   if [[ ! -f "{{justfile_directory()}}/{{template}}" ]]; then echo "Error: missing system template '{{template}}'" >&2; echo "Available system templates:" >&2; for p in "{{justfile_directory()}}"/system/hosts/*.template.scm; do [[ -e "$p" ]] || continue; b="${p##*/}"; echo "  ${b%.template.scm}" >&2; done; exit 1; fi
-  ./scripts/render-config.sh {{disk}} {{template}} {{out}}
+  if [[ ! -f "{{justfile_directory()}}/{{host_definition}}" ]]; then echo "Error: missing host definition '{{host_definition}}'" >&2; echo "Available host definitions:" >&2; for p in "{{justfile_directory()}}"/system/host-definitions/*.scm; do [[ -e "$p" ]] || continue; b="${p##*/}"; echo "  ${b%.scm}" >&2; done; exit 1; fi
+  ./scripts/render-config.sh {{disk}} {{template}} {{out}} {{host_definition}}
 
 # Install rendered system config to target mount (cow-store, init, copy repo).
 system-init host=current_host config=("system/hosts/" + host + ".scm") target="/mnt":

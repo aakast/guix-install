@@ -34,7 +34,10 @@ The end-to-end workflow is:
 |   `-- post-install.sh
 |-- system/
 |   |-- common/base.scm
-|   |-- roles/desktop.scm
+|   |-- service-sets/
+|   |   `-- desktop.scm
+|   |-- host-definitions/
+|   |   `-- workstation.scm
 |   `-- hosts/
 |      |-- workstation.template.scm
 |      `-- workstation.scm
@@ -135,7 +138,7 @@ just snapshot-prune 14
 - This repository is expected at `/git/guix` on the workstation.
 - `just pull` uses `/git/guix/channels.scm`.
 - `just home` and `just home-build` use `--load-path=/git/guix` and host-specific entry points under `/git/guix/home/hosts/<host>.scm`.
-- `just render` defaults to `system/hosts/<hostname -s>.template.scm` and writes `system/hosts/<hostname -s>.scm`.
+- `just render` defaults to `system/hosts/<hostname -s>.template.scm`, uses `system/host-definitions/<hostname -s>.scm`, and writes `system/hosts/<hostname -s>.scm`.
 - `just install`, `just reinstall`, and `just system-init` also default to `hostname -s` and can be overridden by passing an explicit host argument.
 - Extra profiles are installed through `/git/guix/profiles/install-host-profiles.sh`.
 
