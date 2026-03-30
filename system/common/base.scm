@@ -7,7 +7,9 @@
 
 (define %common-services
   (list
-   (service dhcpcd-service-type)
+   (service dhcpcd-service-type
+            (dhcpcd-configuration
+             (no-hook '("hostname"))))
    (service openssh-service-type)))
 
 ;; nss-certs is included in %base-packages by default since Guix 1.4.
