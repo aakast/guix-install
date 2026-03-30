@@ -83,7 +83,7 @@ just home
 just profiles
 ```
 
-`just home` and `just profiles` default to `host=$(hostname -s)`. Override by
+`just home` and `just profiles` default to `host=$(hostname | cut -d. -f1)`. Override by
 passing a host argument, e.g. `just home workstation`.
 
 `post-install.sh` intentionally handles only non-declarative operations (interactive
@@ -138,12 +138,12 @@ just snapshot-prune 14
 - This repository is expected at `/git/guix` on the workstation.
 - `just pull` uses `/git/guix/channels.scm`.
 - `just home` and `just home-build` use `--load-path=/git/guix` and host-specific entry points under `/git/guix/home/hosts/<host>.scm`.
-- `just render` defaults to `system/hosts/<hostname -s>.template.scm`, uses `system/host-definitions/<hostname -s>.scm`, and writes `system/hosts/<hostname -s>.scm`.
-- `just install`, `just reinstall`, and `just system-init` also default to `hostname -s` and can be overridden by passing an explicit host argument.
+- `just render` defaults to `system/hosts/<hostname>.template.scm`, uses `system/host-definitions/<hostname>.scm`, and writes `system/hosts/<hostname>.scm`.
+- `just install`, `just reinstall`, and `just system-init` also default to the current kernel hostname and can be overridden by passing an explicit host argument.
 - Extra profiles are installed through `/git/guix/profiles/install-host-profiles.sh`.
 
-If `hostname -s` returns `localhost`, set `(host-name "<your-host>")` in your
-system host config and apply it with `guix system reconfigure`, then reboot.
+If your hostname resolves unexpectedly, verify `hostname` and
+`cat /proc/sys/kernel/hostname` and pass an explicit host argument when needed.
 
 ## Dotfiles + theming
 

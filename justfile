@@ -1,6 +1,6 @@
 set shell := ["bash", "-cu"]
 
-current_host := `hostname -s`
+current_host := `hostname | cut -d. -f1`
 
 default:
   @just --list

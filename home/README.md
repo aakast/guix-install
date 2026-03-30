@@ -24,7 +24,7 @@ just home
 just home workstation
 ```
 
-`just home` defaults to `hostname -s`.
+`just home` defaults to the current kernel hostname.
 
 ## Dotfiles integration
 

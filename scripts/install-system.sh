@@ -103,6 +103,6 @@ done_step "Sync complete"
 printf '\nInstall complete.\n'
 printf 'After rebooting into the new system:\n'
 printf '  sudo /git/guix/scripts/post-install.sh          # set passwords\n'
-printf '  just -f /git/guix/justfile home                 # uses hostname -s by default\n'
+printf '  just -f /git/guix/justfile home                 # uses kernel hostname by default\n'
 printf '\nTo reconfigure later:\n'
 printf '  sudo guix system reconfigure --load-path=/git/guix /git/guix/system/hosts/<host>.scm\n'

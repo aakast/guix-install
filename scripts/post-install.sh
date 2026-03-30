@@ -57,9 +57,9 @@ fi
 printf '\n'
 done_step "Post-install complete"
 printf 'Next, apply Guix Home (as %s, not root):\n' "$USER_NAME"
-printf '  just -f /git/guix/justfile home                 # defaults to hostname -s\n\n'
+printf '  just -f /git/guix/justfile home                 # defaults to kernel hostname\n\n'
 printf 'To reconfigure the system later:\n'
-printf '  just -f /git/guix/justfile reconfigure          # defaults to hostname -s\n\n'
+printf '  just -f /git/guix/justfile reconfigure          # defaults to kernel hostname\n\n'
 printf 'Optional hardening:\n'
 printf '  cryptsetup luksAddKey /dev/<disk-partition-for-cryptroot>\n'
 printf '  /git/guix/deploy/backup-storage-metadata.sh /dev/<disk> /path/to/off-machine-backup\n'
