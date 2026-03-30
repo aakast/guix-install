@@ -100,12 +100,17 @@
                            (string-append home-base-zsh-extra
                                           home-desktop-zsh-extra))))))
 
-    (service home-bash-service-type
-             (home-bash-configuration
-              (bashrc
-               (list
-               (plain-file "bashrc-extra"
-                           (string-append home-base-bash-extra
-                                          home-desktop-bash-extra))))))
+     (service home-bash-service-type
+              (home-bash-configuration
+               (bash-profile
+                (list
+                 (plain-file "bash-profile-extra"
+                             (string-append home-base-bash-profile-extra
+                                            home-desktop-bash-extra))))
+               (bashrc
+                (list
+                (plain-file "bashrc-extra"
+                            (string-append home-base-bash-extra
+                                           home-desktop-bash-extra))))))
 
    home-base-activation-service)))

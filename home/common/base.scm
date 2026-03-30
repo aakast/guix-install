@@ -3,6 +3,7 @@
   #:use-module (guix gexp)
   #:export (home-base-env-vars
             home-base-zsh-extra
+            home-base-bash-profile-extra
             home-base-bash-extra
             home-base-activation-service))
 
@@ -53,6 +54,8 @@ for p in ~/.guix-extra-profiles/*/; do
 done
 shopt -u nullglob
 ")
+
+(define home-base-bash-profile-extra home-base-bash-extra)
 
 (define home-base-activation-service
   (simple-service

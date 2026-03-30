@@ -8,20 +8,23 @@ Guix Home configuration is composed from:
 
 Entry points:
 
-- `home.scm` convenience redirect (default host)
-- `home/hosts/workstation.scm` concrete host configuration
+- `home.scm` convenience redirect (legacy/default host shim)
+- `home/hosts/<host>.scm` concrete host configuration
 
 ## Apply
 
 ```bash
-guix home reconfigure --load-path=/git/guix /git/guix/home.scm
+guix home reconfigure --load-path=/git/guix /git/guix/home/hosts/workstation.scm
 ```
 
 Or from the repo justfile:
 
 ```bash
 just home
+just home workstation
 ```
+
+`just home` defaults to `hostname -s`.
 
 ## Dotfiles integration
 
@@ -33,6 +36,7 @@ just home
 
 - Shared shell setup lives in `home/common/base.scm`.
 - Desktop-specific shell setup lives in `home/roles/desktop.scm`.
+- Extra Guix feature profiles under `~/.guix-extra-profiles/` are sourced declaratively for bash login and interactive shells.
 - On `tty1`, shell login auto-starts River when no Wayland session is active.
 
 ## Theming model
