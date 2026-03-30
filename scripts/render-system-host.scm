@@ -42,6 +42,9 @@
     (lambda (port)
       (write obj port))))
 
+(define (object->quoted-expression obj)
+  (object->rendered-string `(quote ,obj)))
+
 (define (as-string value)
   (if (string? value)
       value
@@ -127,7 +130,7 @@
     (cons (placeholder "DIRECTORY_BOOTSTRAP_SERVICE_NAME")
           (string-append "'create-" host-name "-directories"))
     (cons (placeholder "MANAGED_DIRECTORIES")
-          (object->rendered-string managed-dirs))
+          (object->quoted-expression managed-dirs))
     (cons (placeholder "HOST_NAME")
           (object->rendered-string host-name))
     (cons (placeholder "TIMEZONE")
@@ -137,7 +140,7 @@
     (cons (placeholder "LOCALE_SOURCE")
           (object->rendered-string (as-string (alist-ref-required 'locale-source host-definition))))
     (cons (placeholder "HOST_KERNEL_ARGUMENTS")
-          (object->rendered-string kernel-arguments))
+          (object->quoted-expression kernel-arguments))
     (cons (placeholder "PRIMARY_USER_NAME")
           (object->rendered-string (as-string (alist-ref-required 'name primary-user))))
     (cons (placeholder "PRIMARY_USER_COMMENT")
@@ -147,7 +150,7 @@
     (cons (placeholder "PRIMARY_USER_HOME")
           (object->rendered-string (as-string (alist-ref-required 'home-directory primary-user))))
     (cons (placeholder "PRIMARY_USER_SUPPLEMENTARY_GROUPS")
-          (object->rendered-string (as-list (alist-ref-required 'supplementary-groups primary-user))))
+          (object->quoted-expression (as-list (alist-ref-required 'supplementary-groups primary-user))))
     (cons (placeholder "SERVICE_SET_SERVICES_EXPR")
           (append-expression service-set-services-vars))
     (cons (placeholder "SERVICE_SET_PACKAGES_EXPR")
