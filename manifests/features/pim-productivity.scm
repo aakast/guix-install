@@ -9,7 +9,5 @@
    "newsboat"
    "notmuch"
    "tasksh"
-   "taskwarrior"
    "timewarrior"
-   "vdirsyncer"
-   ))
+   "vdirsyncer"))
